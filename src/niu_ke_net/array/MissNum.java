@@ -1,4 +1,4 @@
-package niu_ke_net;
+package niu_ke_net.array;
 
 /**
 @author Evergreen
