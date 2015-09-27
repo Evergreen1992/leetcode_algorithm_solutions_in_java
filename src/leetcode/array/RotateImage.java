@@ -24,8 +24,6 @@ public class RotateImage {
 		int[][] matrix = {
 				{1,2},
 				{3,4}
-				//31
-				//42
 		};
 		
 		rotate(matrix);
