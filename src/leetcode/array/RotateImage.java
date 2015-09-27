@@ -6,7 +6,7 @@ public class RotateImage {
 		
 		int  size = matrix.length;
 		int[][] newA = new int[size][size];
-		
+		//
 		for( int i = 0 ; i < size ; i ++){
 			for( int j = 0 ; j < size ; j ++){
 				newA[j][size - 1 - i] = matrix[i][j];
