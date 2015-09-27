@@ -25,7 +25,6 @@ public class RotateImage {
 				{1,2},
 				{3,4}
 		};
-		
 		rotate(matrix);
 		
 		for( int i = 0 ; i < matrix.length; i ++){
