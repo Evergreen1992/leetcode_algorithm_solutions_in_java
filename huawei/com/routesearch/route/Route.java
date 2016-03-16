@@ -8,32 +8,10 @@
 package com.routesearch.route;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-/**
- * 
- * @author Administrator
- * 顶点
- */
-class Node{
-	String index ;//顶点号
-	int status = 0 ;//状态
-	Node next ;//下一节点
-	public Node(String index, int status){
-		this.index = index ;
-		this.status = status ;
-	}
-}
 
 public final class Route
 {
-	//所有节点
-	static Map<Integer, Node> allNodes = new HashMap<Integer,Node>();
-	//邻接节点表
-	static Map<Integer, Node> neighbors = new HashMap<Integer, Node>();
-	//邻接矩阵
 	static int[][] matrix = null ;
 	//开始和结束的节点
 	static int start , end ;
@@ -51,30 +29,15 @@ public final class Route
     public static String searchRoute(String graphContent, String condition)
     {
     	String[] items ;
-    	Node node = null ;
+    	//Node node = null ;
     	matrix = new int[graphContent.split("\n").length][graphContent.split("\n").length];
     	start = Integer.parseInt(condition.split(",")[0]);
     	end = Integer.parseInt(condition.split(",")[1]);
     	conditionNodes = (condition.split(",")[2]).split("\\|");
-    	System.out.println(matrix.length + "," + matrix[0].length);
     	for(String item : graphContent.split("\n")){
     		items = item.split(",");
     		matrix[Integer.parseInt(items[1])][Integer.parseInt(items[2])] = Integer.parseInt(items[3]);
-    		
-    		//源节点
-    		if( allNodes.get(items[1]) == null ){
-    			node = new Node(items[1], 0);
-    			allNodes.put(Integer.parseInt(items[1]), node);
-    		}
-    		//目标节点
-    		if( allNodes.get(items[2]) == null ){
-    			node = new Node(items[2], 0);
-    			allNodes.put(Integer.parseInt(items[2]), node);
-    		}
     	}
-    	
-    	
-    	
     	
     	System.out.println("访问节点:" + start);
     	
@@ -88,27 +51,29 @@ public final class Route
      */
     public static void findNodes(int nodeIndex){
     	//遍历访问当前行。
-    	int emptySize = 0 ;
+    	int emptySize = 0 ;//空边数量
+    	int nodesSize = matrix[0].length;
     	for( int index = 0 ; index < matrix[nodeIndex].length; index ++){
     		if( matrix[nodeIndex][index] >= 1){//存在邻接节点
-    			System.out.println("访问节点:" + nodeIndex + ":" + index);
+    			System.out.println("访问结点:" + index);
     			
     			//检测节点是否已经访问过
     			if(visitedNodes.contains(index) == true){
+    				System.out.println("结点" + index + "已经访问过");
     				continue;
     			}
     			
     			//检测是否到达终点
     			if( index == end ){
-    				if( throughNodes() == true){
+    				if( validatePath() == true){
     					visitedNodes.add(end);
-	    				System.out.println("访问结束~~~~~~~~~~~到达终点");
+	    				System.out.println("访问结束--------------------到达终点");
 	    				handleResult();
-	    				return ;
+	    				//return ;
     				}else{
     					//无效的节点，移除
-    					visitedNodes.remove(visitedNodes.size() - 1);
-    					System.out.println("~~~~~~~~~~~到达终点，但不满足经过节点条件" + index);
+    					//visitedNodes.remove(visitedNodes.size() - 1);
+    					System.out.println("--到达终点，但不满足经过结点条件--");
     					continue;
     				}
     			}else{
@@ -120,8 +85,8 @@ public final class Route
     		}
     	}
     	
-    	if( emptySize == 4){
-    		System.out.println("节点->" + nodeIndex + " 无效");
+    	if( emptySize == nodesSize){
+    		System.out.println("结点->" + nodeIndex + " 无效");
     		//不可达路径
     		visitedNodes.remove(visitedNodes.size() - 1);
     	}
@@ -130,7 +95,7 @@ public final class Route
      * 判断是否经过所有要求的节点
      * @return
      */
-    public static boolean throughNodes(){
+    public static boolean validatePath(){
     	//System.out.println("-----------------------------------------");
     	for( int ii : visitedNodes){
     		System.out.print(ii + "->");
@@ -147,10 +112,11 @@ public final class Route
      * 处理最终结果
      */
     public static void handleResult(){
-    	System.out.println("*****************-********************");
-    	for(int item : visitedNodes){
-    		System.out.print(item + "->");
-    	}
-    	System.out.println();
+    	//System.out.println("---------------------------------------");
+    	//for(int item : visitedNodes){
+    	//	System.out.print(item + "->");
+    	//}
+    	//System.out.println();
+    	//System.out.println("---------------------------------------");
     }
 }
