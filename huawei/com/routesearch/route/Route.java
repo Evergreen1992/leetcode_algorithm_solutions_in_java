@@ -17,8 +17,6 @@ public final class Route
 	static int start , end ;
 	//要经过的节点
 	static String[] conditionNodes = null ;
-	
-	static List<Integer> visitedNodes = new ArrayList<Integer>();//访问过的节点
     /**
      * 你需要完成功能的入口
      * 
@@ -29,7 +27,6 @@ public final class Route
     public static String searchRoute(String graphContent, String condition)
     {
     	String[] items ;
-    	//Node node = null ;
     	matrix = new int[graphContent.split("\n").length][graphContent.split("\n").length];
     	start = Integer.parseInt(condition.split(",")[0]);
     	end = Integer.parseInt(condition.split(",")[1]);
@@ -38,69 +35,44 @@ public final class Route
     		items = item.split(",");
     		matrix[Integer.parseInt(items[1])][Integer.parseInt(items[2])] = Integer.parseInt(items[3]);
     	}
-    	
-    	System.out.println("访问节点:" + start);
-    	
+    	/************************数据处理结束********************************/
+    	List<Integer> visitedNodes = new ArrayList<Integer>();
     	visitedNodes.add(start);
-    	findNodes(start);
+    	findNodes(start, visitedNodes);
         return "hello world!";
     }
 
     /**
      * 开始执行算法
      */
-    public static void findNodes(int nodeIndex){
+    public static void findNodes(int nodeIndex, List<Integer> visitedNodes){
     	//遍历访问当前行。
-    	int emptySize = 0 ;//空边数量
-    	int nodesSize = matrix[0].length;
     	for( int index = 0 ; index < matrix[nodeIndex].length; index ++){
     		if( matrix[nodeIndex][index] >= 1){//存在邻接节点
-    			System.out.println("访问结点:" + index);
-    			
-    			//检测节点是否已经访问过
+    			//检测节点是否已经访6问过
     			if(visitedNodes.contains(index) == true){
-    				System.out.println("结点" + index + "已经访问过");
     				continue;
-    			}
-    			
+    			}    			
+    			//创建新的node
+				List<Integer> tempNodes = new ArrayList<Integer>(visitedNodes);
+				tempNodes.add(index);
     			//检测是否到达终点
     			if( index == end ){
-    				if( validatePath() == true){
-    					visitedNodes.add(end);
-	    				System.out.println("访问结束--------------------到达终点");
-	    				handleResult();
-	    				//return ;
-    				}else{
-    					//无效的节点，移除
-    					//visitedNodes.remove(visitedNodes.size() - 1);
-    					System.out.println("--到达终点，但不满足经过结点条件--");
-    					continue;
+    				if( validatePath(tempNodes) == true){
+	    				System.out.println("一条满足条件的路径:");
+	    				handleResult(tempNodes);
     				}
     			}else{
-    				visitedNodes.add(index);
-    				findNodes(index);
+    				findNodes(index, tempNodes);
     			}
-    		}else{
-    			emptySize ++ ;
     		}
-    	}
-    	
-    	if( emptySize == nodesSize){
-    		System.out.println("结点->" + nodeIndex + " 无效");
-    		//不可达路径
-    		visitedNodes.remove(visitedNodes.size() - 1);
     	}
     }
     /**
      * 判断是否经过所有要求的节点
      * @return
      */
-    public static boolean validatePath(){
-    	//System.out.println("-----------------------------------------");
-    	for( int ii : visitedNodes){
-    		System.out.print(ii + "->");
-    	}
-    	//System.out.println("------------------------------------------");
+    public static boolean validatePath(List<Integer> visitedNodes){
     	for(String nodeIndex : conditionNodes){
     		if( visitedNodes.contains(Integer.parseInt(nodeIndex.trim())) == false)
     			return false;
@@ -111,12 +83,11 @@ public final class Route
     /**
      * 处理最终结果
      */
-    public static void handleResult(){
-    	//System.out.println("---------------------------------------");
-    	//for(int item : visitedNodes){
-    	//	System.out.print(item + "->");
-    	//}
-    	//System.out.println();
-    	//System.out.println("---------------------------------------");
+    public static void handleResult(List<Integer> visitedNodes){
+    	for(int item : visitedNodes){
+    		System.out.print(item + "->");
+    	}
+    	System.out.println();
+    	System.out.println("此路径的权值为:");
     }
 }
