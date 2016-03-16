@@ -8,7 +8,9 @@
 package com.routesearch.route;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class Route
 {
@@ -17,6 +19,29 @@ public final class Route
 	static int start , end ;
 	//要经过的节点
 	static String[] conditionNodes = null ;
+	//最小权值
+	static DataList minCostDataList = null ;
+	static Map<String, String> edgesMap = new HashMap<String,String>();
+	//用于存放一条满足条件的路径的权值和结点信息的数据结构。
+	static class DataList{
+		List<Integer> listNodes = new ArrayList<Integer>();//顶点集
+		int cost = 0 ;//权值
+		public DataList(int start){
+			listNodes.add(start);
+		}
+		//添加一个结点，并更新权值
+		public void add(int data){
+			//更新权值
+			cost += matrix[listNodes.get(listNodes.size() - 1)][data];
+			listNodes.add(data);
+		}
+		//复制结点和权值
+		public void copy(DataList dataList){
+			listNodes = new ArrayList<Integer>(dataList.listNodes);
+			cost = dataList.cost;
+		}
+	}
+	
     /**
      * 你需要完成功能的入口
      * 
@@ -27,43 +52,47 @@ public final class Route
     public static String searchRoute(String graphContent, String condition)
     {
     	String[] items ;
-    	matrix = new int[graphContent.split("\n").length][graphContent.split("\n").length];
-    	start = Integer.parseInt(condition.split(",")[0]);
-    	end = Integer.parseInt(condition.split(",")[1]);
-    	conditionNodes = (condition.split(",")[2]).split("\\|");
+    	String[] graphContentArray = graphContent.split("\n");
+    	String[] conditionArray = condition.split(",");
+    	matrix = new int[graphContentArray.length][graphContentArray.length];
+    	start = Integer.parseInt(conditionArray[0]);
+    	end = Integer.parseInt(conditionArray[1]);
+    	conditionNodes = (conditionArray[2]).split("\\|");
     	for(String item : graphContent.split("\n")){
     		items = item.split(",");
+    		edgesMap.put(items[1] + "," + items[2], items[0]);
     		matrix[Integer.parseInt(items[1])][Integer.parseInt(items[2])] = Integer.parseInt(items[3]);
     	}
     	/************************数据处理结束********************************/
-    	List<Integer> visitedNodes = new ArrayList<Integer>();
-    	visitedNodes.add(start);
-    	findNodes(start, visitedNodes);
+    	DataList dataList = new DataList(start);
+    	findNodes(start, dataList);
+    	/************************寻找路径结束********************************/
+    	printFinalResult(graphContentArray);
         return "hello world!";
     }
 
     /**
      * 开始执行算法
      */
-    public static void findNodes(int nodeIndex, List<Integer> visitedNodes){
+    public static void findNodes(int nodeIndex, DataList dataList){
     	//遍历访问当前行。
     	for( int index = 0 ; index < matrix[nodeIndex].length; index ++){
     		if( matrix[nodeIndex][index] >= 1){//存在邻接节点
     			//检测节点是否已经访6问过
-    			if(visitedNodes.contains(index) == true){
+    			if(dataList.listNodes.contains(index) == true){
     				continue;
     			}    			
     			//创建新的node
-				List<Integer> tempNodes = new ArrayList<Integer>(visitedNodes);
-				tempNodes.add(index);
+				DataList tempDataList = new DataList(start);
+				tempDataList.copy(dataList);
+				tempDataList.add(index);
     			//检测是否到达终点
     			if( index == end ){
-    				if( validatePath(tempNodes) == true){
-	    				System.out.println("一条满足条件的路径:");
-	    				handleResult(tempNodes);
+    				if( validatePath(tempDataList.listNodes) == true){
+    					findMinCostPath(tempDataList);
     				}
     			}else{
-    				findNodes(index, tempNodes);
+    				findNodes(index, tempDataList);
     			}
     		}
     	}
@@ -81,13 +110,42 @@ public final class Route
     }
     
     /**
-     * 处理最终结果
+     * 寻找最小权值路径
      */
-    public static void handleResult(List<Integer> visitedNodes){
-    	for(int item : visitedNodes){
+    public static void findMinCostPath(DataList dataList){
+    	if( minCostDataList == null){
+    		minCostDataList = dataList;
+    	}
+    	if( dataList.cost < minCostDataList.cost){
+    		minCostDataList = dataList;
+    	}
+    	/*System.out.println("一条满足条件的路径:");
+    	for(int item : dataList.listNodes){
     		System.out.print(item + "->");
     	}
     	System.out.println();
-    	System.out.println("此路径的权值为:");
+    	System.out.println("此路径的权值为:" + dataList.cost);*/
+    }
+    /**
+     * 最终处理结果
+     */
+    public static void printFinalResult(String[] content){
+    	if( minCostDataList == null ){
+    		System.out.println("路径不存在...");
+    	}else{
+    		String path = "";
+    		System.out.println("最小权值:" + minCostDataList.cost);
+    		for( int i = 0 ; i < minCostDataList.listNodes.size(); i ++){
+    			System.out.print(minCostDataList.listNodes.get(i) + "->");
+    			if( i >=1 ){
+    				path += edgesMap.get(minCostDataList.listNodes.get(i - 1) + "," +
+    						minCostDataList.listNodes.get(i));
+    				if( i < minCostDataList.listNodes.size() - 1)
+    					path += "|";
+    			}
+    		}
+    		System.out.println();
+    		System.out.println(path);
+    	}
     }
 }
