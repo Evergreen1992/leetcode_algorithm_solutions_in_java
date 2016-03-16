@@ -67,8 +67,7 @@ public final class Route
     	DataList dataList = new DataList(start);
     	findNodes(start, dataList);
     	/************************寻找路径结束********************************/
-    	printFinalResult(graphContentArray);
-        return "hello world!";
+        return printFinalResult(graphContentArray);
     }
 
     /**
@@ -129,9 +128,10 @@ public final class Route
     /**
      * 最终处理结果
      */
-    public static void printFinalResult(String[] content){
+    public static String printFinalResult(String[] content){
     	if( minCostDataList == null ){
     		System.out.println("路径不存在...");
+    		return "NA";
     	}else{
     		String path = "";
     		System.out.println("最小权值:" + minCostDataList.cost);
@@ -146,6 +146,7 @@ public final class Route
     		}
     		System.out.println();
     		System.out.println(path);
+    		return path ;
     	}
     }
 }
