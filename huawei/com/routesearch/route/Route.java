@@ -52,9 +52,8 @@ public final class Route
     public static String searchRoute(String graphContent, String condition)
     {
     	String[] items ;
-    	String[] graphContentArray = graphContent.split("\n");
     	String[] conditionArray = condition.split(",");
-    	matrix = new int[graphContentArray.length][graphContentArray.length];
+    	matrix = new int[600][600];//最多600个顶点
     	start = Integer.parseInt(conditionArray[0]);
     	end = Integer.parseInt(conditionArray[1]);
     	conditionNodes = (conditionArray[2]).split("\\|");
@@ -67,7 +66,7 @@ public final class Route
     	DataList dataList = new DataList(start);
     	findNodes(start, dataList);
     	/************************寻找路径结束********************************/
-        return printFinalResult(graphContentArray);
+        return printFinalResult();
     }
 
     /**
@@ -76,21 +75,21 @@ public final class Route
     public static void findNodes(int nodeIndex, DataList dataList){
     	//遍历访问当前行。
     	for( int index = 0 ; index < matrix[nodeIndex].length; index ++){
-    		if( matrix[nodeIndex][index] >= 1){//存在邻接节点
-    			//检测节点是否已经访6问过
-    			if(dataList.listNodes.contains(index) == true){
-    				continue;
-    			}    			
+    		if( matrix[nodeIndex][index] >= 1 && !dataList.listNodes.contains(index)){//存在邻接节点
     			//创建新的node
 				DataList tempDataList = new DataList(start);
 				tempDataList.copy(dataList);
 				tempDataList.add(index);
+				//System.out.println("访问:" + nodeIndex + "," + index);
+				
+				
     			//检测是否到达终点
     			if( index == end ){
     				if( validatePath(tempDataList.listNodes) == true){
     					findMinCostPath(tempDataList);
     				}
     			}else{
+    				//递归调用
     				findNodes(index, tempDataList);
     			}
     		}
@@ -118,7 +117,8 @@ public final class Route
     	if( dataList.cost < minCostDataList.cost){
     		minCostDataList = dataList;
     	}
-    	/*System.out.println("一条满足条件的路径:");
+    	/**
+    	System.out.println("一条满足条件的路径:");
     	for(int item : dataList.listNodes){
     		System.out.print(item + "->");
     	}
@@ -128,9 +128,8 @@ public final class Route
     /**
      * 最终处理结果
      */
-    public static String printFinalResult(String[] content){
+    public static String printFinalResult(){
     	if( minCostDataList == null ){
-    		System.out.println("路径不存在...");
     		return "NA";
     	}else{
     		String path = "";
