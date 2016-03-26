@@ -2,8 +2,8 @@
  * 实现代码文件
  * 
  * @author Evergreen
- * @since 2016-3-4
- * @version V1.0
+ * @since 2016-3-25
+ * @version V2.0
  */
 package com.routesearch.route;
 
@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
 public final class Route
 {
@@ -21,19 +22,20 @@ public final class Route
 	static int start , end ;
 	//要经过的节点
 	static String[] conditionNodes = null ;
-	//所有结点
-	static Set<Integer> allNodes = new HashSet<Integer>();
 	//最小权值
 	static DataList minCostDataList = null ;
+	//边和权值信息
 	static Map<String, String> edgesMap = new HashMap<String,String>();
 	//条件顶点个数
 	static int conditionSize = 0 ;
 	//开始处理时间
 	static long startTime = System.currentTimeMillis();
-	//访问过的点对
-	static int[][] visitedPair ;
-	
-	
+	//邻居结点集合
+	static Map<Integer,Set<Node>> neighbers = new HashMap<Integer,Set<Node>>();
+	//顶点个数
+	static int nodeSize = 0 ;
+	//访问过的结点标记数组
+	//static int[][] visitedFlagArray = new int[600][8];
 	
 	//用于存放一条满足条件的路径的权值和结点信息的数据结构。
 	static class DataList{
@@ -48,10 +50,13 @@ public final class Route
 			cost += matrix[listNodes.get(listNodes.size() - 1)][data];
 			listNodes.add(data);
 		}
-		//复制结点和权值
-		public void copy(DataList dataList){
-			listNodes = new ArrayList<Integer>(dataList.listNodes);
-			cost = dataList.cost;
+	}
+	//结点数据结构
+	static class Node{
+		public int data ;
+		public boolean visited = false;
+		public Node(int data){
+			this.data = data ;
 		}
 	}
 	
@@ -59,7 +64,7 @@ public final class Route
      * 你需要完成功能的入口
      * 
      * @author Evergreen
-     * @since 2016-3-4
+     * @since 2016-3-25
      * @version V1
      */
     public static String searchRoute(String graphContent, String condition)
@@ -71,95 +76,154 @@ public final class Route
     	start = Integer.parseInt(conditionArray[0]);
     	end = Integer.parseInt(conditionArray[1]);
     	conditionNodes = (conditionArray[2]).split("\\|");
+    	
+    	
     	for(String item : graphContent.split("\n")){
     		items = item.split(",");
     		edgesMap.put(items[1] + "," + items[2], items[0]);
     		
     		matrix[Integer.parseInt(items[1])][Integer.parseInt(items[2])] = Integer.parseInt(items[3]);
     		
-    		allNodes.add(Integer.parseInt(items[1]));
-    		allNodes.add(Integer.parseInt(items[2]));
-    	}
-    	
-    	
-    	visitedPair = new int[allNodes.size()][allNodes.size()];
-    	//数据预处理
-    	//preOperation();
-    	/************************数据处理结束********************************/
-    	DataList dataList = new DataList(start);
-    	findNodes(start, start, dataList);
-    	
-    	
-    	//
-    	System.out.println(".........................................................");
-    	for( int[] array : visitedPair){
-    		for( int iii : array){
-    			System.out.printf("%3d",iii);
+    		//设置邻居结点
+    		if( neighbers.get(Integer.parseInt(items[1])) == null ){
+    			Set<Node> tempSet = new HashSet<Node>();
+    			tempSet.add(new Node(Integer.parseInt(items[2])));
+    			neighbers.put(Integer.parseInt(items[1]), tempSet);
+    		}else{
+    			Set<Node> tempSet = neighbers.get(Integer.parseInt(items[1]));
+    			tempSet.add(new Node(Integer.parseInt(items[2])));
+    			neighbers.put(Integer.parseInt(items[1]), tempSet);
     		}
-    		System.out.println();
     	}
-    	System.out.println(".........................................................");
-    	
+    	nodeSize = neighbers.size();
+    	System.out.println(nodeSize);
+    	/************************数据处理结束********************************/
+    	findNodes();
     	/************************寻找路径结束********************************/
         return printFinalResult();
     }
     /**
-     * 开始执行算法
+     * 开始执行算法.使用栈实现。
      */
-    public static void findNodes(int preNode, int nodeIndex, DataList dataList){
-    	if(visitedPair[preNode][nodeIndex] > 1 ){
-    		return ;
-    	}
-    	/*long nowTime = System.currentTimeMillis();
-    	if( (nowTime - startTime) > 9400 ){
-    		return ;
-    	}*/
-    	//遍历访问当前行。
-    	for( int index = 0 ; index < allNodes.size() + 1; index ++){
-    		if( matrix[nodeIndex][index] >= 1 && !dataList.listNodes.contains(index)){//存在邻接节点
-    			//创建新的node
-				DataList tempDataList = new DataList(start);
-				tempDataList.copy(dataList);
-				tempDataList.add(index);
-				
-				visitedPair[nodeIndex][index] = visitedPair[nodeIndex][index] + 1 ;
-				
-    			//检测是否到达终点
-    			if( index == end ){
-    				//顶点个数必须大于等于条件个数
-    				if( conditionSize > tempDataList.listNodes.size())
-    					continue;
-    				
-    				if( validatePath(tempDataList.listNodes) == true){//满足条件的路径
-    					findMinCostPath(tempDataList);
-    				}
-    			}else{
-    				findNodes(nodeIndex, index, tempDataList);
+    public static void findNodes(){
+    	Stack<Integer> stack = new Stack<Integer>();
+      	stack.push(start);
+
+    	while(!stack.isEmpty()){
+    		
+    		/*long nowTime = System.currentTimeMillis();
+        	if( (nowTime - startTime) > 9400 ){
+        		return ;
+        	}*/
+    		
+    		//栈顶结点
+    		Integer top = stack.peek();
+    		Integer v = getReachableAndNotVisitedNode(top,stack) ;
+    		if(v == -1){
+				setPeakUnvisited(stack.peek());
+    			stack.pop();
+    		}else{
+    			stack.push(v);
+    		}
+    		
+    		if(!stack.isEmpty() && end == stack.peek()){//到达终点
+    			//验证
+    			DataList resultList = validatePath(stack);
+    			if(resultList != null ){
+    				findMinCostPath(resultList);
     			}
+    			stack.pop();
+    		}
+    	}
+	}
+    /**
+     * 判断两个点之间是否联通。用于剪枝。
+     * @param start
+     * @param end
+     * @return
+     */
+    private boolean ifConnectable(int start, int end) { 
+        /*ArrayList<Integer> queue = new ArrayList<Integer>();  
+        ArrayList<Integer> visited = new ArrayList<Integer>();  
+        queue.add(start);  
+        while (!queue.isEmpty()) {  
+            for (int j = 0; j < n; j++) {  
+                if (graph.getAdjMat()[start][j] == 1 && !visited.contains(j)) {  
+                    queue.add(j);  
+                }  
+            }  
+            if (queue.contains(end)) {  
+                return true;  
+            } else {  
+                visited.add(queue.get(0));  
+                queue.remove(0);  
+                if (!queue.isEmpty()) {  
+                    start = queue.get(0);  
+                }  
+            }  
+        }*/
+        return false;  
+    }  
+    /**
+     * 设置未访问标记
+     * @param peak
+     */
+    public static void setPeakUnvisited(Integer peak){
+    	if( neighbers.get(peak) != null ){
+    		for( Node node : neighbers.get(peak)){
+    			node.visited = false;
     		}
     	}
     }
     /**
+     * 查看栈顶节点V在图中，有没有可以到达、且没有入栈、且没有从这个节点V出发访问过的节点
+     * @param top
+     * @return
+     */
+    public static Integer getReachableAndNotVisitedNode(Integer top, Stack<Integer> stack){
+    	if( neighbers.get(top) != null ){
+	    	for(Node nodeData : neighbers.get(top)){//邻接结点
+	    		if(nodeData.visited == false && !stack.contains(nodeData.data)){
+	    			nodeData.visited = true ;
+	    			return nodeData.data ;
+	    		}
+	    	}
+    	}
+    	return -1 ;
+    }
+
+    /**
      * 判断是否经过所有要求的节点
      * @return
      */
-    public static boolean validatePath(List<Integer> visitedNodes){
-    	for(String nodeIndex : conditionNodes){
-    		if( visitedNodes.contains(Integer.parseInt(nodeIndex.trim())) == false){
-    			return false;
-    		}
+    public static DataList validatePath(Stack<Integer> stack){
+		if( conditionSize > stack.size())//顶点个数必须大于等于条件个数
+			return null;
+		
+		DataList dataList = new DataList(start);
+    	for(int i = 0 ; i < conditionNodes.length; i ++){
+    		
+       		Integer integer = Integer.parseInt(conditionNodes[i].trim()) ;
+    		if(stack.contains(integer) == false)
+    			return null;
     	}
-    	return true;
+    	
+    	int i = 0 ;
+    	for(Integer item : stack){
+    		if( i > 0)
+    			dataList.add(item);
+    		i ++ ;
+    		System.out.print(item + "->");
+    	}
+    	System.out.println();
+    	
+    	return dataList;
     }
     
     /**
      * 寻找最小权值路径
      */
     public static void findMinCostPath(DataList dataList){
-    	/*for(int item : dataList.listNodes){
-    		System.out.print(item + "->");
-    	}
-    	System.out.println();*/
     	if( minCostDataList == null){
     		minCostDataList = dataList;
     	}else if( dataList.cost < minCostDataList.cost){
@@ -175,9 +239,9 @@ public final class Route
     		return "NA";
     	}else{
     		String path = "";
-    		//System.out.println("最小权值:" + minCostDataList.cost);
+    		System.out.println("最小权值:" + minCostDataList.cost);
     		for( int i = 0 ; i < minCostDataList.listNodes.size(); i ++){
-    			//System.out.print(minCostDataList.listNodes.get(i) + "->");
+    			System.out.print(minCostDataList.listNodes.get(i) + "->");
     			if( i >=1 ){
     				path += edgesMap.get(minCostDataList.listNodes.get(i - 1) + "," +
     						minCostDataList.listNodes.get(i));
@@ -185,8 +249,8 @@ public final class Route
     					path += "|";
     			}
     		}
-    		//System.out.println();
-    		//System.out.println(path);
+    		System.out.println();
+    		System.out.println(path);
     		return path ;
     	}
     }
