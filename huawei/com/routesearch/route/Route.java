@@ -12,8 +12,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public final class Route
 {
@@ -34,8 +36,8 @@ public final class Route
 	static Map<Integer,Set<Node>> neighbers = new HashMap<Integer,Set<Node>>();
 	//顶点个数
 	static int nodeSize = 0 ;
-	//访问过的结点标记数组
-	//static int[][] visitedFlagArray = new int[600][8];
+	//不连通的结点
+	static List<Integer> nodesNeedToCut = new ArrayList<Integer>();
 	
 	//用于存放一条满足条件的路径的权值和结点信息的数据结构。
 	static class DataList{
@@ -77,12 +79,11 @@ public final class Route
     	end = Integer.parseInt(conditionArray[1]);
     	conditionNodes = (conditionArray[2]).split("\\|");
     	
-    	
     	for(String item : graphContent.split("\n")){
     		items = item.split(",");
     		edgesMap.put(items[1] + "," + items[2], items[0]);
     		
-    		matrix[Integer.parseInt(items[1])][Integer.parseInt(items[2])] = Integer.parseInt(items[3]);
+    		matrix[Integer.parseInt(items[1])][Integer.parseInt(items[2])] = Integer.parseInt(items[3].trim());
     		
     		//设置邻居结点
     		if( neighbers.get(Integer.parseInt(items[1])) == null ){
@@ -96,12 +97,103 @@ public final class Route
     		}
     	}
     	nodeSize = neighbers.size();
-    	System.out.println(nodeSize);
+    	
+    	/*************************数据剪枝*********************************/
+    	cutLeaves();
+    	//重新初始化数据
+    	reInitData(graphContent);
     	/************************数据处理结束********************************/
     	findNodes();
     	/************************寻找路径结束********************************/
         return printFinalResult();
     }
+    /**
+     * 初始化数据
+     */
+    public static void reInitData(String graphContent){
+    	//System.out.println("需要剪枝的结点:" + nodesNeedToCut.size());
+    	
+    	//剪枝后的数据
+    	edgesMap = new HashMap<String,String>();
+    	matrix = new int[600][600];//最多600个顶点
+    	neighbers = new HashMap<Integer,Set<Node>>();
+    	
+    	String[] items = null ;
+    	for(String item : graphContent.split("\n")){
+    		items = item.split(",");
+    		
+    		if( nodesNeedToCut.contains(Integer.parseInt(items[1])) ||
+    				nodesNeedToCut.contains(Integer.parseInt(items[2])) ){
+    			continue;
+    		}
+    		
+    		
+    		edgesMap.put(items[1] + "," + items[2], items[0]);
+    		matrix[Integer.parseInt(items[1])][Integer.parseInt(items[2])] = Integer.parseInt(items[3].trim());
+    		
+    		//设置邻居结点
+    		if( neighbers.get(Integer.parseInt(items[1])) == null ){
+    			Set<Node> tempSet = new HashSet<Node>();
+    			tempSet.add(new Node(Integer.parseInt(items[2])));
+    			neighbers.put(Integer.parseInt(items[1]), tempSet);
+    		}else{
+    			Set<Node> tempSet = neighbers.get(Integer.parseInt(items[1]));
+    			tempSet.add(new Node(Integer.parseInt(items[2])));
+    			neighbers.put(Integer.parseInt(items[1]), tempSet);
+    		}
+    	}
+    	nodeSize = neighbers.size();
+    }
+    /**
+     * 剪枝
+     */
+    public static void cutLeaves(){
+    	for(int i = 0 ; i < nodeSize; i ++){
+    		int condition ;
+    		for( int j = 0 ; j < conditionNodes.length; j ++){
+    			condition = Integer.parseInt(conditionNodes[j].trim());
+    			if( !ifConnectable(i, condition) &&
+    					!ifConnectable(condition, i) ){
+    				nodesNeedToCut.add(i);
+    				break;
+    			}
+    		}
+    	}
+    }
+    /**
+     * 判断两个点之间是否联通。用于剪枝。
+     * @param start
+     * @param end
+     * @return
+     */
+    public static boolean ifConnectable(int start, int end) {
+    	Queue<Integer> queue = new ConcurrentLinkedQueue<Integer>();
+    	List<Integer> visited = new ArrayList<Integer>();
+    	queue.add(start);
+    	int current ;
+    	while(!queue.isEmpty()){
+    		
+    		long nowTime = System.currentTimeMillis();
+        	if( (nowTime - startTime) > 3000 ){
+        		//System.out.println("剪枝超过3秒.....");
+        		return true;
+        	}
+    		
+    		current = queue.poll();
+    		visited.add(current);
+    		if( neighbers.get(current) != null ){
+	    		for(Node node : neighbers.get(current)){
+	    			if( node.data == end)
+	    				return true;
+	    			
+	    			if( !visited.contains(node.data))
+	    				queue.add(node.data);
+	    		}
+    		}
+    	}
+    	
+    	return false;  
+    }  
     /**
      * 开始执行算法.使用栈实现。
      */
@@ -110,11 +202,11 @@ public final class Route
       	stack.push(start);
 
     	while(!stack.isEmpty()){
-    		
-    		/*long nowTime = System.currentTimeMillis();
-        	if( (nowTime - startTime) > 9400 ){
-        		return ;
-        	}*/
+    		long nowTime = System.currentTimeMillis();
+        	if( (nowTime - startTime) > 6500 ){
+        		//System.out.println("超过6秒........结束");
+        		break ;
+        	}
     		
     		//栈顶结点
     		Integer top = stack.peek();
@@ -136,34 +228,6 @@ public final class Route
     		}
     	}
 	}
-    /**
-     * 判断两个点之间是否联通。用于剪枝。
-     * @param start
-     * @param end
-     * @return
-     */
-    private boolean ifConnectable(int start, int end) { 
-        /*ArrayList<Integer> queue = new ArrayList<Integer>();  
-        ArrayList<Integer> visited = new ArrayList<Integer>();  
-        queue.add(start);  
-        while (!queue.isEmpty()) {  
-            for (int j = 0; j < n; j++) {  
-                if (graph.getAdjMat()[start][j] == 1 && !visited.contains(j)) {  
-                    queue.add(j);  
-                }  
-            }  
-            if (queue.contains(end)) {  
-                return true;  
-            } else {  
-                visited.add(queue.get(0));  
-                queue.remove(0);  
-                if (!queue.isEmpty()) {  
-                    start = queue.get(0);  
-                }  
-            }  
-        }*/
-        return false;  
-    }  
     /**
      * 设置未访问标记
      * @param peak
@@ -213,9 +277,9 @@ public final class Route
     		if( i > 0)
     			dataList.add(item);
     		i ++ ;
-    		System.out.print(item + "->");
+    		//System.out.print(item + "->");
     	}
-    	System.out.println();
+    	//System.out.println();
     	
     	return dataList;
     }
@@ -239,9 +303,9 @@ public final class Route
     		return "NA";
     	}else{
     		String path = "";
-    		System.out.println("最小权值:" + minCostDataList.cost);
+    		//System.out.println("最小权值:" + minCostDataList.cost);
     		for( int i = 0 ; i < minCostDataList.listNodes.size(); i ++){
-    			System.out.print(minCostDataList.listNodes.get(i) + "->");
+    			//System.out.print(minCostDataList.listNodes.get(i) + "->");
     			if( i >=1 ){
     				path += edgesMap.get(minCostDataList.listNodes.get(i - 1) + "," +
     						minCostDataList.listNodes.get(i));
@@ -249,8 +313,8 @@ public final class Route
     					path += "|";
     			}
     		}
-    		System.out.println();
-    		System.out.println(path);
+    		//System.out.println();
+    		//System.out.println(path);
     		return path ;
     	}
     }
